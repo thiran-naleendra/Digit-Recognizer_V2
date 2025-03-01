@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digit Recognizer</title>
+    <link rel="stylesheet" href="static/style.css">
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <div class="card">
+          <div class="card-header">
+            <h1>Handwritten Digit Recognition</h1>
+            <p class="subtitle">Upload an image of a handwritten digit to see the prediction</p>
+          </div>
+          <div class="card-content">
+            <div class="upload-section">
+              <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-upload-container">
+                  <div class="file-upload-area" id="dropArea">
+                    <img src="https://cdn-icons-png.flaticon.com/512/3143/3143460.png" class="upload-icon" alt="Upload" />
+                    <p>Drag & drop your image here or</p>
+                    <label for="image" class="file-label">Choose File</label>
+                    <input type="file" id="image" name="image" accept="image/*" required class="file-input" />
+                    <p class="file-name" id="fileName">No file selected</p>
+                  </div>
+                </div>
+                <button type="submit" class="submit-btn">Recognize Digit</button>
+              </form>
+            </div>
+            <div class="result-section">
+              <div class="result-card">
+                <h2>Prediction</h2>
+                <div class="prediction-result" id="predictionResult">?</div>
+                <p class="confidence-text">Upload an image to see the prediction</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('image');
+        const fileName = document.getElementById('fileName');
+        const dropArea = document.getElementById('dropArea');
+        const predictionResult = document.getElementById('predictionResult');
+
+        // Update filename when file is selected
+        fileInput.addEventListener('change', function() {
+          if (this.files && this.files[0]) {
+            fileName.textContent = this.files[0].name;
+            dropArea.classList.add('has-file');
+
+            // Preview image if needed
+            // const reader = new FileReader();
+            // reader.onload = function(e) {
+            //   // Set preview image source
+            // }
+            // reader.readAsDataURL(this.files[0]);
+          } else {
+            fileName.textContent = 'No file selected';
+            dropArea.classList.remove('has-file');
+          }
+        });
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+          dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+          dropArea.classList.add('highlight');
+        }
+
+        function unhighlight() {
+          dropArea.classList.remove('highlight');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+          const dt = e.dataTransfer;
+          const files = dt.files;
+
+          if (files && files.length) {
+            fileInput.files = files;
+            fileName.textContent = files[0].name;
+            dropArea.classList.add('has-file');
+          }
+        }
+
+        // Form submission
+        form.onsubmit = async function(event) {
+          event.preventDefault();
+
+          predictionResult.textContent = '...';
+          document.querySelector('.confidence-text').textContent = 'Processing...';
+
+          const formData = new FormData(form);
+
+          try {
+            const response = await fetch('http://127.0.0.1:5000/predict', {
+              method: 'POST',
+              body: formData,
+            });
+
+            const result = await response.json();
+            predictionResult.textContent = result.predicted_label;
+            document.querySelector('.confidence-text').textContent = 'Prediction complete!';
+          } catch (error) {
+            predictionResult.textContent = '!';
+            document.querySelector('.confidence-text').textContent = 'Error making prediction';
+          }
+        };
+      });
+    </script>
+  </body>
+</html>
